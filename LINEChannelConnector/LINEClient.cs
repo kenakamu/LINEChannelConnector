@@ -113,7 +113,7 @@ namespace LINEChannelConnector
                     {
                         // https://docs.botframework.com/en-us/core-concepts/reference/#animationcard
                         // Use TextMessage for title and use Image message for image. Not really an animation though.
-                        AnimationCard card = JsonConvert.DeserializeObject<AnimationCard>(attachment.Content.ToString());
+                        AnimationCard card = attachment.Content as AnimationCard;
                         messages.Add(new TextMessage($"{card.Title}\r\n{card.Subtitle}\r\n{card.Text}"));
                         foreach (var media in card.Media)
                         {
@@ -126,7 +126,7 @@ namespace LINEChannelConnector
                     {
                         // https://docs.botframework.com/en-us/core-concepts/reference/#audiocard
                         // Use TextMessage for title and use Audio message for image.
-                        AudioCard card = JsonConvert.DeserializeObject<AudioCard>(attachment.Content.ToString());
+                        AudioCard card = attachment.Content as AudioCard;
                         messages.Add(new TextMessage($"{card.Title}\r\n{card.Subtitle}\r\n{card.Text}"));
 
                         foreach (var media in card.Media)
@@ -144,10 +144,10 @@ namespace LINEChannelConnector
                         HeroCard hcard = null;
 
                         if (attachment.ContentType.Contains("card.hero"))
-                            hcard = JsonConvert.DeserializeObject<HeroCard>(attachment.Content.ToString());
+                            hcard = attachment.Content as HeroCard;
                         else if (attachment.ContentType.Contains("card.thumbnail"))
                         {
-                            ThumbnailCard tCard = JsonConvert.DeserializeObject<ThumbnailCard>(attachment.Content.ToString());
+                            ThumbnailCard tCard = attachment.Content as ThumbnailCard;
                             hcard = new HeroCard(tCard.Title, tCard.Subtitle, tCard.Text, tCard.Images, tCard.Buttons, null);
                         }
 
@@ -197,7 +197,7 @@ namespace LINEChannelConnector
                         // https://docs.botframework.com/en-us/core-concepts/reference/#receiptcard
                         // Use TextMessage and Buttons. As LINE doesn't support thumbnail type yet.
 
-                        ReceiptCard card = JsonConvert.DeserializeObject<ReceiptCard>(attachment.Content.ToString());
+                        ReceiptCard card = attachment.Content as ReceiptCard;
                         var text = card.Title + "\r\n\r\n";
                         foreach (var fact in card.Facts)
                         {
@@ -225,7 +225,7 @@ namespace LINEChannelConnector
                     {
                         // https://docs.botframework.com/en-us/core-concepts/reference/#signincard
                         // Line doesn't support auth button yet, so simply represent link.
-                        SigninCard card = JsonConvert.DeserializeObject<SigninCard>(attachment.Content.ToString());
+                        SigninCard card = attachment.Content as SigninCard;
 
                         ButtonsTemplate buttonsTemplate = new ButtonsTemplate(text: card.Text);
 
@@ -241,7 +241,7 @@ namespace LINEChannelConnector
                         // https://docs.botframework.com/en-us/core-concepts/reference/#videocard
                         // Use Video message for video and buttons for action.
 
-                        VideoCard card = JsonConvert.DeserializeObject<VideoCard>(attachment.Content.ToString());
+                        VideoCard card = attachment.Content as VideoCard;
 
                         foreach (var media in card.Media)
                         {
@@ -292,10 +292,10 @@ namespace LINEChannelConnector
                     HeroCard hcard = null;
 
                     if (attachment.ContentType == "application/vnd.microsoft.card.hero")
-                        hcard = JsonConvert.DeserializeObject<HeroCard>(attachment.Content.ToString());
+                        hcard = attachment.Content as HeroCard;
                     else if (attachment.ContentType == "application/vnd.microsoft.card.thumbnail")
                     {
-                        ThumbnailCard tCard = JsonConvert.DeserializeObject<ThumbnailCard>(attachment.Content.ToString());
+                        ThumbnailCard tCard = attachment.Content as ThumbnailCard;
                         hcard = new HeroCard(tCard.Title, tCard.Subtitle, tCard.Text, tCard.Images, tCard.Buttons, null);
                     }
                     else
@@ -422,11 +422,12 @@ namespace LINEChannelConnector
             List<IMessageActivity> activities = new List<IMessageActivity>();
             foreach (var ev in events)
             {
+                var replyToken = JObject.Parse(JsonConvert.SerializeObject(ev))["replyToken"];
+                Initialize(ev, replyToken.ToString());
                 switch (ev.Type)
                 {
                     case WebhookEventType.Message:
                         var messageEv = (MessageEvent)ev;
-                        Initialize(messageEv);
                         // Handle type by type
                         switch (messageEv.Message.Type)
                         {
@@ -480,20 +481,20 @@ namespace LINEChannelConnector
         /// Save User related information.
         /// </summary>
         /// <param name="ev"></param>
-        private void Initialize(MessageEvent ev)
+        private void Initialize(WebhookEvent ev, string replyToken)
         {
             var lineId = ev.Source.Id;
 
             if (CacheService.caches.Keys.Contains(lineId))
             {
                 var userParams = CacheService.caches[lineId] as Dictionary<string, object>;
-                userParams["ReplyToken"] = ev.ReplyToken;
+                userParams["ReplyToken"] = replyToken;
             }
             else
             {
                 // If no cache, then create new one.
                 var userParams = new Dictionary<string, object>();
-                userParams["ReplyToken"] = ev.ReplyToken;
+                userParams["ReplyToken"] = replyToken;
                 CacheService.caches[lineId] = userParams;
             }
         }
