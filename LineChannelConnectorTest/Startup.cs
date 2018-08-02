@@ -18,12 +18,15 @@ namespace LineChannelConnectorTest
         public void Configuration(IAppBuilder app)
         {
             RegisterInMemoryBotStore();
-            app.UseLINEChannel(config: new LINEConfig()
+            var lineConfig = new LINEConfig()
             {
                 ChannelAccessToken = ConfigurationManager.AppSettings["ChannelAccessToken"].ToString(),
                 ChannelSecret = ConfigurationManager.AppSettings["ChannelAccessSecret"].ToString()
-            });
-
+            };
+#if DEBUG
+            lineConfig.Uri = ConfigurationManager.AppSettings["Uri"].ToString();
+#endif
+            app.UseLINEChannel(config: lineConfig);
             app.UseWebApi(configuration);
             WebApiConfig.Register(configuration);
         }

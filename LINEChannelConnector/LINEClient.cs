@@ -17,16 +17,20 @@ namespace LINEChannelConnector
     /// Handles LINE related activities.
     /// </summary>
     public class LINEClient
-    {  
+    {
         private LINEConfig config;
         private LineMessagingClient messagingClient;
-    
+
         public LINEClient(LINEConfig config)
         {
             this.config = config;
-            messagingClient = new LineMessagingClient(config.ChannelAccessToken, "http://localhost:8080");
+            messagingClient =
+                new LineMessagingClient(
+                    config.ChannelAccessToken,
+                    config.Uri
+                );
         }
-        
+
         /// <summary>
         /// Convert Bot Connector activity to LINE message and send.
         /// </summary>
@@ -42,10 +46,10 @@ namespace LINEChannelConnector
             {
                 await SendAsync(result.messages, userId, replyToken);
 
-            HttpOperationResponse<ResourceResponse> response = new HttpOperationResponse<ResourceResponse>();
-            return response;
+                HttpOperationResponse<ResourceResponse> response = new HttpOperationResponse<ResourceResponse>();
+                return response;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw ex;
             }
@@ -350,7 +354,7 @@ namespace LINEChannelConnector
 
                 var rand = new Random(Guid.NewGuid().GetHashCode());
                 var stickerId = stickerids[rand.Next(stickerids.Length - 1)].ToString();
-             
+
                 messages.Add(new StickerMessage("1", stickerId));
             }
             else if (!string.IsNullOrEmpty(activity.Text))
@@ -417,7 +421,7 @@ namespace LINEChannelConnector
         {
             List<IMessageActivity> activities = new List<IMessageActivity>();
             foreach (var ev in events)
-            {                
+            {
                 switch (ev.Type)
                 {
                     case WebhookEventType.Message:
@@ -445,8 +449,28 @@ namespace LINEChannelConnector
                                 activities.Add(mediaActivity);
                                 break;
                         }
-                        break;                    
-                } 
+                        break;
+                    case WebhookEventType.Beacon:
+                        var beaconActivity = HandleBeacon(((BeaconEvent)ev), ev.Source.UserId);
+                        activities.Add(beaconActivity);
+                        break;
+                    case WebhookEventType.Follow:
+                        var followActivity = HandleFollow(((FollowEvent)ev), ev.Source.UserId);
+                        activities.Add(followActivity);
+                        break;
+                    case WebhookEventType.Unfollow:
+                        var unfollowActivity = HandleUnfollow(((UnfollowEvent)ev), ev.Source.UserId);
+                        activities.Add(unfollowActivity);
+                        break;
+                    case WebhookEventType.Join:
+                        var joinActivity = HandleJoin(((JoinEvent)ev), ev.Source.UserId);
+                        activities.Add(joinActivity);
+                        break;
+                    case WebhookEventType.Leave:
+                        var leaveActivity = HandleLeave(((LeaveEvent)ev), ev.Source.UserId);
+                        activities.Add(leaveActivity);
+                        break;
+                }
             }
 
             return activities;
@@ -473,11 +497,82 @@ namespace LINEChannelConnector
                 CacheService.caches[lineId] = userParams;
             }
         }
-      
+
         #region Handlers
-        
-       
+
+
         #endregion
+
+        /// <summary>
+        /// Handles beacon event
+        /// </summary>
+        /// <param name="ev">BeaconEvent</param>
+        /// <param name="userId">UserId</param>
+        /// <returns>IMessageActivity</returns>
+        private IMessageActivity HandleBeacon(BeaconEvent ev, string userId)
+        {
+            var activity = GetActivityBase(userId);
+            activity.ChannelData = ev;
+            activity.Text = "beacon";
+            return activity;
+        }
+
+
+        /// <summary>
+        /// Handles Follow event
+        /// </summary>
+        /// <param name="ev">FollowEvent</param>
+        /// <param name="userId">UserId</param>
+        /// <returns>IMessageActivity</returns>
+        private IMessageActivity HandleFollow(FollowEvent ev, string userId)
+        {
+            var activity = GetActivityBase(userId);
+            activity.ChannelData = ev;
+            activity.Text = "follow";
+            return activity;
+        }
+
+        /// <summary>
+        /// Handles Unfollow event
+        /// </summary>
+        /// <param name="ev">UnfollowEvent</param>
+        /// <param name="userId">UserId</param>
+        /// <returns>IMessageActivity</returns>
+        private IMessageActivity HandleUnfollow(UnfollowEvent ev, string userId)
+        {
+            var activity = GetActivityBase(userId);
+            activity.ChannelData = ev;
+            activity.Text = "unfollow";
+            return activity;
+        }
+
+        /// <summary>
+        /// Handles Join event
+        /// </summary>
+        /// <param name="ev">JoinEvent</param>
+        /// <param name="userId">UserId</param>
+        /// <returns>IMessageActivity</returns>
+        private IMessageActivity HandleJoin(JoinEvent ev, string userId)
+        {
+            var activity = GetActivityBase(userId);
+            activity.ChannelData = ev;
+            activity.Text = "join";
+            return activity;
+        }
+
+        /// <summary>
+        /// Handles Leave event
+        /// </summary>
+        /// <param name="ev">LeaveEvent</param>
+        /// <param name="userId">UserId</param>
+        /// <returns>IMessageActivity</returns>
+        private IMessageActivity HandleLeave(LeaveEvent ev, string userId)
+        {
+            var activity = GetActivityBase(userId);
+            activity.ChannelData = ev;
+            activity.Text = "leave";
+            return activity;
+        }
 
         /// <summary>
         /// Convert Text type
@@ -490,7 +585,7 @@ namespace LINEChannelConnector
         {
             var activity = GetActivityBase(userId);
             activity.Text = userMessage;
-            return activity;            
+            return activity;
         }
 
         /// <summary>
@@ -508,7 +603,7 @@ namespace LINEChannelConnector
             ms.WriteTo(file);
             file.Close();
             var serverUrl = HttpContext.Current.Request.Url.Scheme + "://" + HttpContext.Current.Request.Url.Host + ":" + HttpContext.Current.Request.Url.Port;
-            
+
             var activity = GetActivityBase(userId);
             activity.Attachments = new List<Attachment>();
             activity.Attachments.Add(new Attachment()

@@ -10,5 +10,6 @@ namespace LINEChannelConnector
     {
         public string ChannelSecret { get; set; }
         public string ChannelAccessToken { get; set; }
+        public string Uri { get; set; } = "https://api.line.me/v2";
     }
 }
