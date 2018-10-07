@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <AssemblyName>LINEChannelConnector</AssemblyName>
+    <RootNamespace>LINEChannelConnector</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Line.Messaging" Version="1.4.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.1.1" />
+    <PackageReference Include="Microsoft.Bot.Builder" Version="4.0.7" />
+    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.14" />
+  </ItemGroup>
+
+</Project>
